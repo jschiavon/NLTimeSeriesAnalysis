@@ -74,7 +74,7 @@ std::vector<double> TimeSeries::TSlaggedVec(const uint N, const uint t) const
 	}
 }
 
-size_t TimeSeries::length() const
+uint TimeSeries::length() const
 {
 	return SingleTS.size();
 }
@@ -97,8 +97,8 @@ double TimeSeries::LaggedDistance(const uint N, const uint t1, const uint t2) co
 	if (t1 < N-1 || t2 < N-1){
 		return NAN;
 	} else {
-		double d=0;
-		for (size_t i =0; i != N; ++i){
+		double d = 0;
+		for (uint i = 0; i != N; ++i){
 			d += (SingleTS[t1-i] * SingleTS[t2-i]) * (SingleTS[t1-i] * SingleTS[t2-i]);
 		}
 		return d;

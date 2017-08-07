@@ -48,7 +48,7 @@ public:
 	std::vector< double > TSlaggedVec (const uint, const uint) const;
 	void TSDivideTrainPred (const double, TimeSeries &, TimeSeries &);
 	
-	size_t length () const;
+	uint length () const;
 	
 	std::vector< double >::const_iterator TSbegin () const {return this->SingleTS.begin();};
 	std::vector< double >::const_iterator TSend () const {return this->SingleTS.end();};

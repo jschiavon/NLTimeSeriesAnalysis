@@ -269,7 +269,9 @@ double PowerLawFit(const std::vector<std::array<double,2>> X)
 		sumXY += log(X[i][0])*log(X[i][1]);
 		sumX2 += log(X[i][0])*log(X[i][0]);
 	}
-	return (X.size()*sumXY - sumX*sumY)/(X.size()*sumX2 - sumX*sumX);
+	double b = (X.size()*sumXY - sumX*sumY)/(X.size()*sumX2 - sumX*sumX);
+	double a = (sumY - b*sumX)/X.size();
+	return b;
 }
 
 

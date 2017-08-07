@@ -138,12 +138,24 @@ TotalTimeSeries::TotalTimeSeries(const std::string &filename)
 // ********************************************************************************************************
 // MEMBER PUBLIC FUNCTIONS
 // ********************************************************************************************************
+// Container Modifier
 void TotalTimeSeries::add_series(const TimeSeries& val)
 {
 	N_dim ++;
 	CompleteTS.push_back(val);
 }
 
+void TotalTimeSeries::DivideTrainPred(const double ratio, TotalTimeSeries &train, TotalTimeSeries &pred)
+{
+	for (uint m = 0; m != N_dim; m++){
+		TimeSeries helptrain, helppred;
+		ChooseSeries(m).TSDivideTrainPred(ratio, helptrain, helppred);
+		train.add_series(helptrain);
+		pred.add_series(helppred);
+	}
+}
+
+// Predictors
 std::vector<std::array<double,2>> TotalTimeSeries::CorrelationFunction()
 {
 	std::vector<std::vector<double>> distmatrix = CompleteMatrixDistances();
@@ -180,16 +192,28 @@ double TotalTimeSeries::CorrelationDimension()
 	return PowerLawFit(corrvect);
 }
 
-void TotalTimeSeries::DivideTrainPred(const double ratio, TotalTimeSeries &train, TotalTimeSeries &pred)
-{
-	for (uint m = 0; m != N_dim; m++){
-		TimeSeries helptrain, helppred;
-		ChooseSeries(m).TSDivideTrainPred(ratio, helptrain, helppred);
-		train.add_series(helptrain);
-		pred.add_series(helppred);
+// TODO!
+double TotalTimeSeries::PredictionCOM_scores(const double ratioTrainPred, const uint PRED_STEP){
+	TotalTimeSeries train, target, predicted;
+	DivideTrainPred(ratioTrainPred, train, target);
+	for (uint currInd = 0; currInd != target.length_of_TS(); ++currInd){
+		std::vector< Dist_data > distances = train.VectorDistanceFromPred(target, currInd);
+		std::partial_sort(distances.begin(), distances.begin()+(N_dim+1), distances.end(), mysortingDist_Data);
+		for (uint k = 0; k != N_dim; ++k)
+		{
+			double avg_per_comp = 0;
+			double weight_sum = 0;
+			for (uint i = 0; i != N_dim+1; ++i){
+				double weight = WeightFunction(distances[i].dist,distances[0].dist);
+				avg_per_comp += train.ChooseSeries[k].SingleTS[distances[i].label]*weight;
+				weight_sum += weight;
+			}
+			avg_per_comp /= weight_sum;
+		}
 	}
+	double rho;
+	return rho;
 }
-
 
 // ********************************************************************************************************
 // MEMBER PRIVATE FUNCTIONS
@@ -197,15 +221,30 @@ void TotalTimeSeries::DivideTrainPred(const double ratio, TotalTimeSeries &train
 std::vector<std::vector<double> > TotalTimeSeries::CompleteMatrixDistances()
 {
 	std::vector<std::vector<double>> matrix;
+	matrix.reserve(length_of_TS());
 	std::vector<double> vector;
-	for (uint i = 0; i != this->length_of_TS(); ++i){
-		for (uint j = 0; j != this->length_of_TS(); ++j){
-			vector.push_back(this->DistFunc(i,j));
+	for (uint i = 0; i != length_of_TS(); ++i){
+		vector.reserve(length_of_TS());
+		for (uint j = 0; j != length_of_TS(); ++j){
+			vector.push_back(DistFunc(i,j));
 		}
 		matrix.push_back(vector);
 		vector.clear();
 	}
 	return matrix;
+}
+
+std::vector< Dist_data > TotalTimeSeries::VectorDistanceFromPred(const TotalTimeSeries &pred, const uint currentInd)
+{
+	std::vector< Dist_data > dist;
+	dist.reserve(length_of_TS());
+	for (uint i = 0; i != length_of_TS(); ++i){
+		Dist_data helper;
+		helper.dist = DistFunc(pred, i, currentInd);
+		helper.label = i;
+		dist.push_back(helper);
+	}
+	return dist;
 }
 
 double TotalTimeSeries::DistFunc(const uint i, const uint j) const
@@ -217,6 +256,15 @@ double TotalTimeSeries::DistFunc(const uint i, const uint j) const
 		}
 	} else {
 		d = NAN;
+	}
+	return d;
+}
+
+double TotalTimeSeries::DistFunc(const TotalTimeSeries &pred, const uint i, const uint j) const
+{
+	double d = 0;
+	for (uint k = 0; k != N_dim; ++k){
+		d += (CompleteTS[k].SingleTS[i] - pred.CompleteTS[k].SingleTS[j]) * (CompleteTS[k].SingleTS[i] - pred.CompleteTS[k].SingleTS[j]);
 	}
 	return d;
 }
@@ -236,6 +284,22 @@ bool mysorting (double i, double j) {
 			return true;
 		} else {
 			return (i<j);
+		}
+	}
+}
+
+bool mysortingDist_Data (Dist_data i, Dist_data j) {
+	if (std::isnan(i.dist)){
+		if (std::isnan(j.dist)){
+			return true;
+		} else {
+			return false;
+		}
+	} else {
+		if (std::isnan(j.dist)){
+			return true;
+		} else {
+			return (i.dist<j.dist);
 		}
 	}
 }

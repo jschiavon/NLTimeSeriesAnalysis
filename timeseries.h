@@ -33,6 +33,12 @@ class TotalTimeSeries;
 // SUPPORT CLASS
 // ********************************************************************************************************
 
+struct Dist_data
+{
+	double dist;
+	int label;
+};
+
 class TimeSeries
 {
 	friend class TotalTimeSeries;
@@ -85,13 +91,14 @@ public:
 	
 	std::vector<std::array<double,2>> CorrelationFunction();
 	double CorrelationDimension();
-	
+	double PredictionCOM_scores(const double, const uint);
 	
 private:
 	// Private member
 	std::vector< std::vector< double > > CompleteMatrixDistances();
+	std::vector< Dist_data > VectorDistanceFromPred(const TotalTimeSeries&, const uint);
 	double DistFunc(const uint, const uint) const;
-	
+	double DistFunc(const TotalTimeSeries&, const uint, const uint) const;
 	// Data type
 	uint N_dim = 0;
 	std::vector< TimeSeries > CompleteTS;
@@ -100,5 +107,6 @@ private:
 void SortDistanceMatrix(std::vector<std::vector<double>>&);
 void MinMaxDist(std::vector<std::vector<double>>&, double&, double&);
 double PowerLawFit(const std::vector<std::array<double,2>>);
+double WeightFunction (const double, const double);
 
 #endif // TIMESERIES_H

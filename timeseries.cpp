@@ -192,7 +192,8 @@ double TotalTimeSeries::CorrelationDimension()
 	return PowerLawFit(corrvect);
 }
 
-double TotalTimeSeries::PredictionCOM_scores(const double ratioTrainPred, const uint PRED_STEP){
+double TotalTimeSeries::PredictionCOM_scores(const double ratioTrainPred, const uint PRED_STEP)
+{
 	TotalTimeSeries train, target;
 	DivideTrainPred(ratioTrainPred, train, target);
 	TotalTimeSeries predicted(target);
@@ -205,7 +206,7 @@ double TotalTimeSeries::PredictionCOM_scores(const double ratioTrainPred, const 
 			double weight_sum = 0;
 			for (uint i = 0; i != N_dim+1; ++i){
 				double weight = WeightFunction(distances[i].dist,distances[0].dist);
-				avg_per_comp += train.ChooseSeries[k].SingleTS[distances[i].label+PRED_STEP]*weight;
+				avg_per_comp += train.CompleteTS[k].SingleTS[distances[i].label+PRED_STEP]*weight;
 				weight_sum += weight;
 			}
 			predicted.CompleteTS[k].SingleTS[currInd] = avg_per_comp/weight_sum;
@@ -274,17 +275,40 @@ double TotalTimeSeries::DistFunc(const TotalTimeSeries &pred, const uint i, cons
 	return d;
 }
 
-//TODO!!!
-double TotalTimeSeries::CalculateCorrelation(const TotalTimeSeries &target) const
+double TotalTimeSeries::DistFunc(const uint i) const
 {
-	double rho;
-	return rho;
+	double d = 0;
+	for (uint k = 0; k != N_dim; ++k){
+		d += CompleteTS[k].SingleTS[i] * CompleteTS[k].SingleTS[i];
+	}
+	return d;
+}
+
+// VERIFY EXISTENCE OF A BETTER ESTIMATOR!
+double TotalTimeSeries::CalculateCorrelation(const TotalTimeSeries &target) 
+{
+	double rho = 0;
+	for (uint i = 0; i != length_of_TS(); ++i)
+	{
+		rho += DistFunc(target,i,i);
+	}
+	return sqrt(rho)/(length_of_TS()*target.CalculateSTD());
+}
+
+double TotalTimeSeries::CalculateSTD() const 
+{
+	double std = 0;
+	for (uint i = 0; i != length_of_TS(); i++){
+		std += DistFunc(i);
+	}
+	return sqrt(std)/length_of_TS();
 }
 
 // ********************************************************************************************************
 // NON-MEMBER FUNCTIONS
 // ********************************************************************************************************
-bool mysorting (double i, double j) { 
+bool mysorting (double i, double j) 
+{ 
 	if (std::isnan(i)){
 		if (std::isnan(j)){
 			return true;
@@ -300,7 +324,8 @@ bool mysorting (double i, double j) {
 	}
 }
 
-bool mysortingDist_Data (Dist_data i, Dist_data j) {
+bool mysortingDist_Data (Dist_data i, Dist_data j) 
+{
 	if (std::isnan(i.dist)){
 		if (std::isnan(j.dist)){
 			return true;
@@ -349,7 +374,6 @@ double PowerLawFit(const std::vector<std::array<double,2>> X)
 	double a = (sumY - b*sumX)/X.size();
 	return b;
 }
-
 
 double WeightFunction (const double dist, const double dist0)
 {

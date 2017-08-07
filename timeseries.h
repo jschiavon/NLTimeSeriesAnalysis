@@ -83,8 +83,8 @@ public:
 	TotalTimeSeries(const TotalTimeSeries &inputTTS): N_dim(inputTTS.N_dim),CompleteTS(inputTTS.CompleteTS) {};
 	
 	// Public member function
-	uint number_of_TS(){return N_dim;};
-	uint length_of_TS(){return CompleteTS[0].length();};
+	uint number_of_TS() const {return N_dim;};
+	uint length_of_TS() const {return CompleteTS[0].length();};
 	
 	void add_series (const TimeSeries &);
 	TimeSeries ChooseSeries(const uint i){return CompleteTS[i];};
@@ -100,8 +100,10 @@ private:
 	std::vector< Dist_data > VectorDistanceFromPred(const TotalTimeSeries&, const uint);
 	double DistFunc(const uint, const uint) const;
 	double DistFunc(const TotalTimeSeries&, const uint, const uint) const;
+	double DistFunc(const uint) const;
 	
-	double CalculateCorrelation(const TotalTimeSeries &) const;
+	double CalculateCorrelation(const TotalTimeSeries &);
+	double CalculateSTD() const;
 	
 	// Data type
 	uint N_dim = 0;
@@ -112,5 +114,7 @@ void SortDistanceMatrix(std::vector<std::vector<double>>&);
 void MinMaxDist(std::vector<std::vector<double>>&, double&, double&);
 double PowerLawFit(const std::vector<std::array<double,2>>);
 double WeightFunction (const double, const double);
+bool mysorting (double i, double j);
+bool mysortingDist_Data (Dist_data i, Dist_data j);
 
 #endif // TIMESERIES_H

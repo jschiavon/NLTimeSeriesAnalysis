@@ -56,8 +56,8 @@ public:
 	
 	uint length () const;
 	
-	std::vector< double >::const_iterator TSbegin () const {return this->SingleTS.begin();};
-	std::vector< double >::const_iterator TSend () const {return this->SingleTS.end();};
+	std::vector< double >::const_iterator TSbegin () const {return SingleTS.begin();};
+	std::vector< double >::const_iterator TSend () const {return SingleTS.end();};
 	
 private:
 	// Private member function
@@ -80,6 +80,7 @@ public:
 	TotalTimeSeries() = default;
 	explicit TotalTimeSeries(const std::string&);
 	TotalTimeSeries(const TimeSeries &inputTS): N_dim(1), CompleteTS(1,inputTS) {};
+	TotalTimeSeries(const TotalTimeSeries &inputTTS): N_dim(inputTTS.N_dim),CompleteTS(inputTTS.CompleteTS) {};
 	
 	// Public member function
 	uint number_of_TS(){return N_dim;};
@@ -99,6 +100,9 @@ private:
 	std::vector< Dist_data > VectorDistanceFromPred(const TotalTimeSeries&, const uint);
 	double DistFunc(const uint, const uint) const;
 	double DistFunc(const TotalTimeSeries&, const uint, const uint) const;
+	
+	double CalculateCorrelation(const TotalTimeSeries &) const;
+	
 	// Data type
 	uint N_dim = 0;
 	std::vector< TimeSeries > CompleteTS;

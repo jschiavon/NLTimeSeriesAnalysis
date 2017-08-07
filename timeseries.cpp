@@ -192,11 +192,11 @@ double TotalTimeSeries::CorrelationDimension()
 	return PowerLawFit(corrvect);
 }
 
-// TODO!
 double TotalTimeSeries::PredictionCOM_scores(const double ratioTrainPred, const uint PRED_STEP){
-	TotalTimeSeries train, target, predicted;
+	TotalTimeSeries train, target;
 	DivideTrainPred(ratioTrainPred, train, target);
-	for (uint currInd = 0; currInd != target.length_of_TS(); ++currInd){
+	TotalTimeSeries predicted(target);
+	for (uint currInd = 0; currInd != target.length_of_TS()-PRED_STEP; ++currInd){
 		std::vector< Dist_data > distances = train.VectorDistanceFromPred(target, currInd);
 		std::partial_sort(distances.begin(), distances.begin()+(N_dim+1), distances.end(), mysortingDist_Data);
 		for (uint k = 0; k != N_dim; ++k)
@@ -205,13 +205,18 @@ double TotalTimeSeries::PredictionCOM_scores(const double ratioTrainPred, const 
 			double weight_sum = 0;
 			for (uint i = 0; i != N_dim+1; ++i){
 				double weight = WeightFunction(distances[i].dist,distances[0].dist);
-				avg_per_comp += train.ChooseSeries[k].SingleTS[distances[i].label]*weight;
+				avg_per_comp += train.ChooseSeries[k].SingleTS[distances[i].label+PRED_STEP]*weight;
 				weight_sum += weight;
 			}
-			avg_per_comp /= weight_sum;
+			predicted.CompleteTS[k].SingleTS[currInd] = avg_per_comp/weight_sum;
 		}
 	}
-	double rho;
+	for (uint k = 0; k != N_dim; ++k)
+	{
+		predicted.CompleteTS[k].SingleTS.erase(predicted.CompleteTS[k].TSend()-PRED_STEP,predicted.CompleteTS[k].TSend());
+	}
+	
+	double rho = predicted.CalculateCorrelation(target);
 	return rho;
 }
 
@@ -267,6 +272,13 @@ double TotalTimeSeries::DistFunc(const TotalTimeSeries &pred, const uint i, cons
 		d += (CompleteTS[k].SingleTS[i] - pred.CompleteTS[k].SingleTS[j]) * (CompleteTS[k].SingleTS[i] - pred.CompleteTS[k].SingleTS[j]);
 	}
 	return d;
+}
+
+//TODO!!!
+double TotalTimeSeries::CalculateCorrelation(const TotalTimeSeries &target) const
+{
+	double rho;
+	return rho;
 }
 
 // ********************************************************************************************************

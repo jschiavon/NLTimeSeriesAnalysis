@@ -2,3 +2,7 @@
 *.out
 *.o
 *.json
+GPATH
+GRTAGS
+GSYMS
+GTAGS

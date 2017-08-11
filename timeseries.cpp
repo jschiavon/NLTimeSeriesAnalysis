@@ -156,7 +156,7 @@ void TotalTimeSeries::DivideTrainPred(const double ratio, TotalTimeSeries &train
 }
 
 // Predictors
-std::vector<std::array<double,2>> TotalTimeSeries::CorrelationFunction()
+void TotalTimeSeries::CorrelationFunction(std::vector<std::array<double,2>> &corrvect)
 {
 	std::vector<std::vector<double>> distmatrix = CompleteMatrixDistances();
 	SortDistanceMatrix(distmatrix);
@@ -165,7 +165,6 @@ std::vector<std::array<double,2>> TotalTimeSeries::CorrelationFunction()
 	MinMaxDist(distmatrix,mindist,maxdist);
 	rangeEpsilon = maxdist-mindist;
 	
-	std::vector<std::array<double,2>> corrvect;
 	std::array<double,2> singlepair;
 	std::vector<int> count(length_of_TS(),0);
 		
@@ -183,12 +182,11 @@ std::vector<std::array<double,2>> TotalTimeSeries::CorrelationFunction()
 		singlepair[1] = totcount/((double)length_of_TS()*(double)length_of_TS());
 		corrvect.push_back(singlepair);
 	}
-	return corrvect;
 }
 
-double TotalTimeSeries::CorrelationDimension()
+double TotalTimeSeries::CorrelationDimension(std::vector<std::array<double,2>> &corrvect)
 {
-	std::vector<std::array<double,2>> corrvect = CorrelationFunction();
+	CorrelationFunction(corrvect);
 	return PowerLawFit(corrvect);
 }
 
@@ -381,4 +379,4 @@ double WeightFunction (const double dist, const double dist0)
 }
 
 
-int main(){}
+//int main(){}

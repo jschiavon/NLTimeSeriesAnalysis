@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include <vector>
+#include <array>
 
 
 const uint TotalLength = 100000;
@@ -57,7 +58,7 @@ void LorenzFunction(const state_space &X0){
 	uint c = 0;
 	for (uint j = 0; j < N_variables; ++j){
 		for (uint i = 0; i <= TotalLength; ++i){
-			if (i%50 == 0)
+			if (i%10 == 0)
 			{
 				myfile << X_t[i][j] << '\t';
 				c++;

@@ -90,8 +90,7 @@ public:
 	TimeSeries ChooseSeries(const uint i){return CompleteTS[i];};
 	void DivideTrainPred(const double, TotalTimeSeries&, TotalTimeSeries&);
 	
-	std::vector<std::array<double,2>> CorrelationFunction();
-	double CorrelationDimension();
+	double CorrelationDimension(std::vector<std::array<double,2>>&);
 	double PredictionCOM_scores(const double, const uint);
 	
 private:
@@ -102,6 +101,7 @@ private:
 	double DistFunc(const TotalTimeSeries&, const uint, const uint) const;
 	double DistFunc(const uint) const;
 	
+	void CorrelationFunction(std::vector<std::array<double,2>>&);
 	double CalculateCorrelation(const TotalTimeSeries &);
 	double CalculateSTD() const;
 	

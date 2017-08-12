@@ -242,8 +242,8 @@ std::vector< Dist_data > TotalTimeSeries::VectorDistanceFromPred(const TotalTime
 {
 	std::vector< Dist_data > dist;
 	dist.reserve(length_of_TS());
+	Dist_data helper;
 	for (uint i = 0; i != length_of_TS(); ++i){
-		Dist_data helper;
 		helper.dist = DistFunc(pred, i, currentInd);
 		helper.label = i;
 		dist.push_back(helper);

@@ -9,7 +9,7 @@
 #include "timeseries.h"
 
 int main(){
-	TotalTimeSeries totalseries("LORENZ_Formatted.dat");
+	TotalTimeSeries totalseries("LV_Formatted.dat");
 	
 	size_t numberOfSeries = totalseries.number_of_TS();
 	size_t totalLength = totalseries.length_of_TS();
@@ -19,7 +19,7 @@ int main(){
 	std::vector<std::array<double,2>> corrvect;
 	std::cout << "CorrelationDimension = " << totalseries.CorrelationDimension(corrvect) << '\n';
 	
-	std::ofstream myfile ("output_GRASS.dat");
+	std::ofstream myfile ("output_GRASS_LV.dat");
 	for (uint i = 0; i != corrvect.size(); i++){
 		myfile << corrvect[i][0] << '\t' << corrvect[i][1] << '\n';
 	}

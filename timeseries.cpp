@@ -158,29 +158,37 @@ void TotalTimeSeries::DivideTrainPred(const double ratio, TotalTimeSeries &train
 // Predictors
 void TotalTimeSeries::CorrelationFunction(std::vector<std::array<double,2>> &corrvect)
 {
+	std::cout << "calculate matrix\n";
 	std::vector<std::vector<double>> distmatrix = CompleteMatrixDistances();
 	SortDistanceMatrix(distmatrix);
+	
+	std::cout << "completed!\ncalculate min dist\n";
 	
 	double mindist, maxdist, rangeEpsilon;
 	MinMaxDist(distmatrix,mindist,maxdist);
 	rangeEpsilon = maxdist-mindist;
 	
+	std::cout << mindist << '\t' << rangeEpsilon << '\t' << maxdist <<'\n';
 	std::array<double,2> singlepair;
-	std::vector<int> count(length_of_TS(),0);
-		
-	for (double exp = log10(mindist)+2; exp <= log10(mindist)+5; exp += 0.2){
+	std::vector<uint> count(length_of_TS(),0);
+	
+	for (double exp = log10(mindist); exp <= log10(mindist)+log10(rangeEpsilon)/2; exp += 0.5){
 		singlepair[0] = pow(10,exp);
 		double totcount = 0;
 		for (uint i = 0; i != length_of_TS(); ++i){
-			for (uint k = count[i]; k != length_of_TS(); ++k){
-				if (distmatrix[i][k] < singlepair[0]*singlepair[0]){
-					count[i]++;
-				}
+			uint k = count[i];
+			while (distmatrix[i][k] <= singlepair[0]*singlepair[0]){
+				count[i]++;
+				k++;
 			}
 			totcount += count[i];
 		}
 		singlepair[1] = totcount/((double)length_of_TS()*(double)length_of_TS());
-		corrvect.push_back(singlepair);
+		std::cout << singlepair[0] << '\t' << totcount << '\n';
+		if (totcount > 0)
+		{
+			corrvect.push_back(singlepair);
+		}
 	}
 }
 

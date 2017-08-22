@@ -90,6 +90,8 @@ public:
 	TimeSeries ChooseSeries(const uint i){return CompleteTS[i];};
 	void DivideTrainPred(const double, TotalTimeSeries&, TotalTimeSeries&);
 	
+	void StandardizeSeries();
+	
 	double CorrelationDimension(std::vector<std::array<double,2>>&);
 	double PredictionCOM_scores(const double, const uint);
 	

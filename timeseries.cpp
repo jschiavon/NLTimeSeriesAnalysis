@@ -155,10 +155,68 @@ void TotalTimeSeries::DivideTrainPred(const double ratio, TotalTimeSeries &train
 	}
 }
 
+void TotalTimeSeries::StandardizeSeries()
+{
+	std::vector<double> xmin(N_dim, 1000);
+	std::vector<double> xmax(N_dim, 0);
+	for (uint i = 0; i != length_of_TS(); i++)
+	{
+		for (uint k = 0; k != N_dim; k++)
+		{
+			if (CompleteTS[k].SingleTS[i] < xmin[k])
+			{
+				xmin[k] = CompleteTS[k].SingleTS[i];
+			}
+			if (CompleteTS[k].SingleTS[i] > xmax[k])
+			{
+				xmax[k] = CompleteTS[k].SingleTS[i];
+			}
+		}
+	}
+	for (uint i = 0; i != length_of_TS(); i++)
+	{
+		for (uint k = 0; k != N_dim; k++)
+		{
+			this->CompleteTS[k].SingleTS[i] /= (xmax[k]-xmin[k]);
+			this->CompleteTS[k].SingleTS[i] -= xmin[k];
+		}
+	}
+}
+
 // Predictors
 void TotalTimeSeries::CorrelationFunction(std::vector<std::array<double,2>> &corrvect)
 {
-	std::cout << "calculate matrix\n";
+	StandardizeSeries();
+	std::array<double,2> singlepair{10,0};
+	for (uint i = 1; i != 30; i++)
+	{
+		singlepair[0] /= length_of_TS();
+		corrvect.push_back(singlepair);
+		//std::cout << singlepair[0] << '\n';
+		singlepair[0] *= 1.15*length_of_TS();
+	}
+	
+	for (uint i = 0; i != length_of_TS()-1; i++)
+	{
+		for (uint j = i; j != length_of_TS(); j++)
+		{
+			double dist = DistFunc(i,j);
+			for (uint k = 0; k != corrvect.size(); k++)
+			{
+				if (dist < corrvect[k][0])
+				{
+					corrvect[k][1] ++;
+				}
+			}
+		}
+	}
+	
+	for (uint i = 0; i != corrvect.size(); i++)
+	{
+		corrvect[i][1] /= (length_of_TS()*length_of_TS());
+		std::cout << corrvect[i][0] << '\t' << corrvect[i][1] <<'\n';
+	}
+	/*
 	std::vector<std::vector<double>> distmatrix = CompleteMatrixDistances();
 	SortDistanceMatrix(distmatrix);
 	
@@ -169,7 +227,7 @@ void TotalTimeSeries::CorrelationFunction(std::vector<std::array<double,2>> &cor
 	rangeEpsilon = maxdist-mindist;
 	
 	std::cout << mindist << '\t' << rangeEpsilon << '\t' << maxdist <<'\n';
-	std::array<double,2> singlepair;
+	//std::array<double,2> singlepair;
 	std::vector<uint> count(length_of_TS(),0);
 	
 	for (double exp = log10(mindist); exp <= -3; exp += 0.05){
@@ -189,7 +247,7 @@ void TotalTimeSeries::CorrelationFunction(std::vector<std::array<double,2>> &cor
 		{
 			corrvect.push_back(singlepair);
 		}
-	}
+	}*/
 }
 
 double TotalTimeSeries::CorrelationDimension(std::vector<std::array<double,2>> &corrvect)

@@ -172,7 +172,7 @@ void TotalTimeSeries::CorrelationFunction(std::vector<std::array<double,2>> &cor
 	std::array<double,2> singlepair;
 	std::vector<uint> count(length_of_TS(),0);
 	
-	for (double exp = log10(mindist); exp <= log10(mindist)+log10(rangeEpsilon)/2; exp += 0.5){
+	for (double exp = log10(mindist); exp <= -3; exp += 0.05){
 		singlepair[0] = pow(10,exp);
 		double totcount = 0;
 		for (uint i = 0; i != length_of_TS(); ++i){

@@ -57,7 +57,7 @@ void LorenzFunction(const state_space_LOR &X0){
 	uint c = 0;
 	for (uint j = 0; j < N_variables_LOR; ++j){
 		for (uint i = 0; i <= TotalLength; ++i){
-			if (i%10 == 0)
+			//if (i%10 == 0)
 			{
 				myfile << X_t[i][j] << '\t';
 				c++;
@@ -158,31 +158,25 @@ void Call_LV()
 }
 
 int main(int argc, char *argv[]){
-	if (argc==0)
-	{
-		std::cout << "You must give a parameter:" << '\n';
-		std::cout << " -- 0 -> LORENZ 3Dim System" << '\n';
-		std::cout << " -- 1 -> TENT MAP" << '\n';
-		std::cout << " -- 2 -> L-V 4Dim System" << '\n';
-		return 0;
-	} else
-	{
-		switch (argv[1][0])
+	switch (argv[1][0])
 		{
-			case '0':
+			case 'h':
+			{
+				std::cout << "You must give a parameter:" << '\n';
+				std::cout << " -- 1 -> LORENZ 3Dim System" << '\n';
+				std::cout << " -- 2 -> TENT MAP" << '\n';
+				std::cout << " -- 3 -> L-V 4Dim System" << '\n';
+				break;
+			}
+			case '1':
 				Call_Lorenz();
 				break;
-			case '1':
+			case '2':
 				std::cout << "TENT MAP not implemented yet\n";
 				break;
-			case '2':
+			case '3':
 				Call_LV();
 				break;
 		}
-		return 0;
-	}
-	
-	
-
-    
+		return 0; 
 }

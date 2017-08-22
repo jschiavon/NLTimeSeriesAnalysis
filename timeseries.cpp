@@ -26,6 +26,8 @@
 #include <string>
 #include <algorithm>
 #include <math.h>
+//#include <boost/thread.hpp>
+
 #include "timeseries.h"
 
 									// *******************************************************************************************************
@@ -195,59 +197,30 @@ void TotalTimeSeries::CorrelationFunction(std::vector<std::array<double,2>> &cor
 		//std::cout << singlepair[0] << '\n';
 		singlepair[0] *= 1.15*length_of_TS();
 	}
-	
+	char const *prefix = "Looking for nearest neighbors. Progress: ";
 	for (uint i = 0; i != length_of_TS()-1; i++)
 	{
+		double p = static_cast<double>(i*100/length_of_TS());
+		std::cout << '\r' << prefix << static_cast<int>(p) << '%' << std::flush;
 		for (uint j = i; j != length_of_TS(); j++)
 		{
 			double dist = DistFunc(i,j);
 			for (uint k = 0; k != corrvect.size(); k++)
 			{
-				if (dist < corrvect[k][0])
+				if (dist < corrvect[k][0]*corrvect[k][0])
 				{
 					corrvect[k][1] ++;
 				}
 			}
 		}
 	}
+	std::cout << '\r' << prefix << 100 << '%' << std::endl;
 	
 	for (uint i = 0; i != corrvect.size(); i++)
 	{
 		corrvect[i][1] /= (length_of_TS()*length_of_TS());
 		std::cout << corrvect[i][0] << '\t' << corrvect[i][1] <<'\n';
 	}
-	/*
-	std::vector<std::vector<double>> distmatrix = CompleteMatrixDistances();
-	SortDistanceMatrix(distmatrix);
-	
-	std::cout << "completed!\ncalculate min dist\n";
-	
-	double mindist, maxdist, rangeEpsilon;
-	MinMaxDist(distmatrix,mindist,maxdist);
-	rangeEpsilon = maxdist-mindist;
-	
-	std::cout << mindist << '\t' << rangeEpsilon << '\t' << maxdist <<'\n';
-	//std::array<double,2> singlepair;
-	std::vector<uint> count(length_of_TS(),0);
-	
-	for (double exp = log10(mindist); exp <= -3; exp += 0.05){
-		singlepair[0] = pow(10,exp);
-		double totcount = 0;
-		for (uint i = 0; i != length_of_TS(); ++i){
-			uint k = count[i];
-			while (distmatrix[i][k] <= singlepair[0]*singlepair[0]){
-				count[i]++;
-				k++;
-			}
-			totcount += count[i];
-		}
-		singlepair[1] = totcount/((double)length_of_TS()*(double)length_of_TS());
-		std::cout << singlepair[0] << '\t' << totcount << '\n';
-		if (totcount > 0)
-		{
-			corrvect.push_back(singlepair);
-		}
-	}*/
 }
 
 double TotalTimeSeries::CorrelationDimension(std::vector<std::array<double,2>> &corrvect)

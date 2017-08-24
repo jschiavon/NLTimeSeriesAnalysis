@@ -10,10 +10,12 @@
 
 int main(){
 	std::string systemName;
-	std::cout << "Choose the system you are interested in:\n";
+	std::cout << "Choose the system you are interested in by typing the identifier followed by return:\n";
 	std::cout << " -- LOR -> LORENZ 3Dim System\n";
 	std::cout << " -- TENT -> TENT MAP\n";
 	std::cout << " -- LV -> L-V 4Dim System\n";
+	
+	std::cin >> systemName;
 	
 	TotalTimeSeries totalseries(systemName + "_Formatted.dat");
 	

@@ -44,7 +44,7 @@ void LorenzFunction(const state_space_LOR &X0){
 	timeseries_LOR X_t;
 	X_t.reserve(TotalLength);
 	X_t.push_back(X0);
-	std::ofstream myfile1 ("LORENZ_Plottable.dat");
+	std::ofstream myfile1 ("LOR_Plottable.dat");
 	for (uint i = 1; i <= TotalLength; ++i){
 		X_t.push_back(integrator_LOR(X_t[i-1]));
 		for (uint j = 0; j != N_variables_LOR; j++){
@@ -53,7 +53,7 @@ void LorenzFunction(const state_space_LOR &X0){
 		myfile1 << '\n';
 	}
 	myfile1.close();
-	std::ofstream myfile ("LORENZ_Formatted.dat");
+	std::ofstream myfile ("LOR_Formatted.dat");
 	uint c = 0;
 	for (uint j = 0; j < N_variables_LOR; ++j){
 		for (uint i = 0; i <= TotalLength; ++i){
@@ -138,7 +138,7 @@ void LVFunction(const state_space_LV &X0){
 	uint c = 0;
 	for (uint j = 0; j < N_variables_LV; ++j){
 		for (uint i = 0; i <= TotalLength; ++i){
-			if (i%20 == 0)
+			if (i%10 == 0)
 			{
 				myfile << X_t[i][j] << '\t';
 				c++;

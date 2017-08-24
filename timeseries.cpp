@@ -198,7 +198,7 @@ void TotalTimeSeries::CorrelationFunction(std::vector<std::array<double,2>> &cor
 {
 	//StandardizeSeries();
 	std::array<double,2> singlepair{0,0};
-	for (double i = 6; i > -7; i-= 0.5)
+	for (double i = 6; i > -8; i-= 0.5)
 	{
 		singlepair[0] = pow(1/2.0,static_cast<double>(i));
 		//singlepair[0] /= length_of_TS();
@@ -227,6 +227,7 @@ void TotalTimeSeries::CorrelationFunction(std::vector<std::array<double,2>> &cor
 	for (uint i = 0; i != corrvect.size(); i++)
 	{
 		corrvect[i][1] /= static_cast<double>(length_of_TS()*(length_of_TS()-1)/2);
+		corrvect[i][0] = pow(2.,static_cast<double>(i));
 		std::cout << corrvect[i][0] << '\t' << corrvect[i][1] <<'\n';
 	}
 }

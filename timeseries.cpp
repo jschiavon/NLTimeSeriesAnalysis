@@ -175,11 +175,19 @@ void TotalTimeSeries::StandardizeSeries()
 			}
 		}
 	}
+	double diff = 0;
+	for (uint i = 0; i != N_dim; i++)
+	{
+		if (xmax[i]-xmin[i] > diff)
+		{
+			diff = xmax[i] - xmin[i];
+		}
+	}
 	for (uint i = 0; i != length_of_TS(); i++)
 	{
 		for (uint k = 0; k != N_dim; k++)
 		{
-			this->CompleteTS[k].SingleTS[i] /= (xmax[k]-xmin[k]);
+			this->CompleteTS[k].SingleTS[i] /= diff;
 			this->CompleteTS[k].SingleTS[i] -= xmin[k];
 		}
 	}
@@ -188,14 +196,14 @@ void TotalTimeSeries::StandardizeSeries()
 // Predictors
 void TotalTimeSeries::CorrelationFunction(std::vector<std::array<double,2>> &corrvect)
 {
-	StandardizeSeries();
-	std::array<double,2> singlepair{10,0};
-	for (uint i = 1; i != 30; i++)
+	//StandardizeSeries();
+	std::array<double,2> singlepair{0,0};
+	for (double i = 6; i > -7; i-= 0.5)
 	{
-		singlepair[0] /= length_of_TS();
+		singlepair[0] = pow(1/2.0,static_cast<double>(i));
+		//singlepair[0] /= length_of_TS();
 		corrvect.push_back(singlepair);
 		//std::cout << singlepair[0] << '\n';
-		singlepair[0] *= 1.15*length_of_TS();
 	}
 	char const *prefix = "Looking for nearest neighbors. Progress: ";
 	for (uint i = 0; i != length_of_TS()-1; i++)
@@ -218,7 +226,7 @@ void TotalTimeSeries::CorrelationFunction(std::vector<std::array<double,2>> &cor
 	
 	for (uint i = 0; i != corrvect.size(); i++)
 	{
-		corrvect[i][1] /= (length_of_TS()*length_of_TS());
+		corrvect[i][1] /= static_cast<double>(length_of_TS()*(length_of_TS()-1)/2);
 		std::cout << corrvect[i][0] << '\t' << corrvect[i][1] <<'\n';
 	}
 }

@@ -34,6 +34,61 @@
 									// 							SUPPORT CLASS
 									// *******************************************************************************************************
 
+void CorrFuncVect::AddPair(const CorrFuncPair &pair)
+{
+	corrvect.push_back(pair);
+}
+
+void CorrFuncVect::AddEps(const double &eps)
+{
+	CorrFuncPair supp(eps);
+	AddPair(supp);
+}
+
+void CorrFuncVect::CompleteCountingComparison(const double &point)
+{
+	for (auto it = begin(); it != end(); it++)
+	{
+		it->CountIfSmaller(point);
+	}
+}
+
+void CorrFuncVect::RescaleVectorCounter(const double &param)
+{
+	for (auto it = begin(); it != end(); it++)
+	{
+		it->RescaleCounter(param);
+	}
+}
+
+void CorrFuncPair::Print()
+{
+	std::cout << epsilon << '\t' << counter;
+}
+
+void CorrFuncVect::Print()
+{
+	for (auto it = begin(); it != end(); it++)
+	{
+		it->Print();
+		std::cout << '\n';
+	}
+}
+
+double CorrFuncVect::PowerLawFit()
+{
+	double sumEps = 0, sumCount =0, sumEpsCount = 0, sumEps2 = 0;
+	for (auto it = begin(); it != end(); ++it){
+		sumEps += log(it->epsilon);
+		sumCount += log(it->counter);
+		sumEpsCount += log(it->epsilon)*log(it->counter);
+		sumEps2 += log(it->epsilon)*log(it->epsilon);
+	}
+	double b = (size()*sumEpsCount - sumEps*sumCount)/(size()*sumEps2 - sumEps*sumEps);
+	double a = (sumCount - b*sumEps)/size();
+	return b;
+}
+
 // ********************************************************************************************************
 // CONSTRUCTOR
 // ********************************************************************************************************
@@ -126,7 +181,10 @@ TotalTimeSeries::TotalTimeSeries(const std::string &filename)
 		TimeSeries singleinput(line);
 		//std::cout << i << '\t' << singleinput.length() << '\n';
 		if (CompleteTS.size() != 0){
-			if (singleinput.length() != this->length_of_TS()){std::cerr << "Time series has different dimensions. This abilities has not been developed yet, please provide series of equal dimensions" << '\n';break;}
+			if (singleinput.length() != this->length_of_TS()){
+				std::cerr << "Time series has different dimensions. This abilities has not been developed yet, please provide series of equal dimensions" << '\n';
+				break;
+			}
 		}
 		CompleteTS.push_back(singleinput);
 		i++;
@@ -194,48 +252,10 @@ void TotalTimeSeries::StandardizeSeries()
 }
 
 // Predictors
-void TotalTimeSeries::CorrelationFunction(std::vector<std::array<double,2>> &corrvect)
-{
-	//StandardizeSeries();
-	std::array<double,2> singlepair{0,0};
-	for (double i = 6; i > -8; i-= 0.5)
-	{
-		singlepair[0] = pow(1/2.0,static_cast<double>(i));
-		//singlepair[0] /= length_of_TS();
-		corrvect.push_back(singlepair);
-		//std::cout << singlepair[0] << '\n';
-	}
-	char const *prefix = "Looking for nearest neighbors. Progress: ";
-	for (uint i = 0; i != length_of_TS()-1; i++)
-	{
-		double p = static_cast<double>(i*100/length_of_TS());
-		std::cout << '\r' << prefix << static_cast<int>(p) << '%' << std::flush;
-		for (uint j = i; j != length_of_TS(); j++)
-		{
-			double dist = DistFunc(i,j);
-			for (uint k = 0; k != corrvect.size(); k++)
-			{
-				if (dist < corrvect[k][0]*corrvect[k][0])
-				{
-					corrvect[k][1] ++;
-				}
-			}
-		}
-	}
-	std::cout << '\r' << prefix << 100 << '%' << std::endl;
-	
-	for (uint i = 0; i != corrvect.size(); i++)
-	{
-		corrvect[i][1] /= static_cast<double>(length_of_TS()*(length_of_TS()-1)/2);
-		corrvect[i][0] = pow(2.,static_cast<double>(i));
-		std::cout << corrvect[i][0] << '\t' << corrvect[i][1] <<'\n';
-	}
-}
-
-double TotalTimeSeries::CorrelationDimension(std::vector<std::array<double,2>> &corrvect)
+double TotalTimeSeries::CorrelationDimension(CorrFuncVect &corrvect)
 {
 	CorrelationFunction(corrvect);
-	return PowerLawFit(corrvect);
+	return corrvect.PowerLawFit();
 }
 
 double TotalTimeSeries::PredictionCOM_scores(const double ratioTrainPred, const uint PRED_STEP)
@@ -270,6 +290,35 @@ double TotalTimeSeries::PredictionCOM_scores(const double ratioTrainPred, const 
 // ********************************************************************************************************
 // MEMBER PRIVATE FUNCTIONS
 // ********************************************************************************************************
+void TotalTimeSeries::CorrelationFunction(CorrFuncVect &corrvect)
+{
+	//StandardizeSeries();
+	for (double i = 20; i >= 10; i-= 0.1)
+	{
+		corrvect.AddEps(pow(1/2.0,static_cast<double>(i)));
+		//std::cout << singlepair[0] << '\n';
+	}
+	char const *prefix = "Looking for nearest neighbors. Progress: ";
+	//int counter = 0;
+//#pragma omp declare reduction (sum:std::vector<std::array<double,2>>:
+//#pragma omp parallel for schedule(dynamic,1) reduction(+:counter)
+	for (int i = 0; i < length_of_TS()-1; i++)
+	{
+		double p = static_cast<double>(i*100/length_of_TS());
+		std::cout << '\r' << prefix << static_cast<int>(p) << '%' << std::flush;
+		for (int j = i; j < length_of_TS(); j++)
+		{
+			double dist = DistFunc(i,j);
+			corrvect.CompleteCountingComparison(dist);
+		}
+	}
+	std::cout << '\r' << prefix << 100 << '%' << std::endl;
+	
+	corrvect.RescaleVectorCounter(static_cast<double>(length_of_TS()*(length_of_TS()-1))/2);
+	corrvect.Print();
+}
+
+
 std::vector<std::vector<double> > TotalTimeSeries::CompleteMatrixDistances()
 {
 	std::vector<std::vector<double>> matrix;
@@ -407,24 +456,10 @@ void MinMaxDist(std::vector<std::vector<double>> &mat, double &min, double &max)
 	}
 }
 
-double PowerLawFit(const std::vector<std::array<double,2>> X)
-{
-	double sumX = 0, sumY =0, sumXY = 0, sumX2 = 0;
-	for (uint i = 0; i != X.size(); ++i){
-		sumX += log(X[i][0]);
-		sumY += log(X[i][1]);
-		sumXY += log(X[i][0])*log(X[i][1]);
-		sumX2 += log(X[i][0])*log(X[i][0]);
-	}
-	double b = (X.size()*sumXY - sumX*sumY)/(X.size()*sumX2 - sumX*sumX);
-	double a = (sumY - b*sumX)/X.size();
-	return b;
-}
-
 double WeightFunction (const double dist, const double dist0)
 {
 	return std::max(exp(dist/dist0), MIN_WEIGHT);
 }
 
 
-//int main(){}
+int main(){}

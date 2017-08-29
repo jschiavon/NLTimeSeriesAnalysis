@@ -39,6 +39,51 @@ struct Dist_data
 	int label;
 };
 
+struct CorrFuncVect;
+
+struct CorrFuncPair
+{
+	friend struct CorrFuncVect;
+public:
+	// Constructor
+	CorrFuncPair() = default;
+	CorrFuncPair(const double &eps): epsilon(eps) {};
+	
+private:
+	// Private member function
+	void CountIfSmaller (const double &point){ if (point <= epsilon*epsilon){counter++;} }
+	void RescaleCounter (const double &param){ counter /= param;}
+	void Print ();
+	
+	// Data member
+	double epsilon = 0;
+	uint counter = 0;
+};
+
+struct CorrFuncVect
+{
+public:
+	// Constructor
+	CorrFuncVect() = default;
+	CorrFuncVect(const CorrFuncPair &pair): corrvect(1,pair){};
+	
+	// Public Member
+	void AddPair(const CorrFuncPair &);
+	void AddEps(const double &);
+	void CompleteCountingComparison (const double &);
+	void RescaleVectorCounter(const double &);
+	void Print ();
+	double PowerLawFit ();
+	
+	auto size() {return corrvect.size();};
+	auto begin() {return corrvect.begin();};
+	auto end() {return corrvect.end();};
+	
+private:
+	// Data member
+	std::vector<CorrFuncPair> corrvect;
+};
+
 class TimeSeries
 {
 	friend class TotalTimeSeries;
@@ -92,7 +137,7 @@ public:
 	
 	void StandardizeSeries();
 	
-	double CorrelationDimension(std::vector<std::array<double,2>>&);
+	double CorrelationDimension(CorrFuncVect&);
 	double PredictionCOM_scores(const double, const uint);
 	
 private:
@@ -103,7 +148,7 @@ private:
 	double DistFunc(const TotalTimeSeries&, const uint, const uint) const;
 	double DistFunc(const uint) const;
 	
-	void CorrelationFunction(std::vector<std::array<double,2>>&);
+	void CorrelationFunction(CorrFuncVect&);
 	double CalculateCorrelation(const TotalTimeSeries &);
 	double CalculateSTD() const;
 	
@@ -114,7 +159,6 @@ private:
 
 void SortDistanceMatrix(std::vector<std::vector<double>>&);
 void MinMaxDist(std::vector<std::vector<double>>&, double&, double&);
-double PowerLawFit(const std::vector<std::array<double,2>>);
 double WeightFunction (const double, const double);
 bool mysorting (double i, double j);
 bool mysortingDist_Data (Dist_data i, Dist_data j);

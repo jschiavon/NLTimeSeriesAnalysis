@@ -48,16 +48,21 @@ public:
 	// Constructor
 	CorrFuncPair() = default;
 	CorrFuncPair(const double &eps): epsilon(eps) {};
+	CorrFuncPair(const double &eps, const int &count): epsilon(eps), counter(static_cast<double>(count)) {};
+	CorrFuncPair(const double &eps, const double &count): epsilon(eps), counter(count) {};
 	
 private:
 	// Private member function
 	void CountIfSmaller (const double &point){ if (point <= epsilon*epsilon){counter++;} }
 	void RescaleCounter (const double &param){ counter /= param;}
-	void Print ();
+	double GetRatioFromCounter(const double &param){return counter/param;}
+	
+	friend std::ostream &operator<< (std::ostream &out, const CorrFuncPair &pair);
+	friend CorrFuncPair operator+ (const CorrFuncPair &, const CorrFuncPair &);
 	
 	// Data member
 	double epsilon = 0;
-	uint counter = 0;
+	double counter = 0;
 };
 
 struct CorrFuncVect
@@ -66,18 +71,27 @@ public:
 	// Constructor
 	CorrFuncVect() = default;
 	CorrFuncVect(const CorrFuncPair &pair): corrvect(1,pair){};
+	CorrFuncVect(const CorrFuncVect &vect): corrvect(vect.corrvect){};
+	//CorrFuncVect(const 
+	
+	decltype(auto) size() const {return corrvect.size();};
+	decltype(auto) begin() {return corrvect.begin();};
+	decltype(auto) end() {return corrvect.end();};
+	decltype(auto) cbegin() const {return corrvect.cbegin();};
+	decltype(auto) cend() const {return corrvect.cend();};
+	
+	friend std::ostream &operator<< (std::ostream &out, const CorrFuncVect &vect);
+	friend CorrFuncVect operator+ (const CorrFuncVect &, const CorrFuncVect &);
+	decltype(auto) operator[] (const int index);
 	
 	// Public Member
 	void AddPair(const CorrFuncPair &);
 	void AddEps(const double &);
+	
 	void CompleteCountingComparison (const double &);
 	void RescaleVectorCounter(const double &);
-	void Print ();
 	double PowerLawFit ();
-	
-	auto size() {return corrvect.size();};
-	auto begin() {return corrvect.begin();};
-	auto end() {return corrvect.end();};
+	void DeleteZeros ();
 	
 private:
 	// Data member

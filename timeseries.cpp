@@ -26,6 +26,7 @@
 #include <string>
 #include <algorithm>
 #include <math.h>
+#include <assert.h>
 //#include <boost/thread.hpp>
 
 #include "timeseries.h"
@@ -45,9 +46,61 @@ void CorrFuncVect::AddEps(const double &eps)
 	AddPair(supp);
 }
 
+decltype(auto) CorrFuncVect::operator[](const int index)
+{
+	if (index < size() ) 
+		return corrvect[index]; 
+	else 
+	{
+		std::cout << "error access\n"; 
+		return corrvect[size()-1];
+	}
+}
+
+std::ostream& operator<< (std::ostream &out, const CorrFuncPair &pair)
+{
+	out << pair.epsilon << '\t' << pair.counter;
+	return out;
+}
+
+std::ostream& operator<< (std::ostream &out, const CorrFuncVect &vect)
+{
+	for (auto it = vect.cbegin(); it != vect.cend(); it++)
+	{
+		out << *it << '\n';
+	}
+	return out;
+}
+
+CorrFuncPair operator+ (const CorrFuncPair &lhs, const CorrFuncPair &rhs)
+{
+	if (lhs.epsilon == rhs.epsilon)
+	{
+		CorrFuncPair sum(lhs.epsilon, lhs.counter + rhs.counter);
+		return sum;
+	} else
+	{ 
+		std::cerr << "ERROR: summing with different epsilon!\n";
+		return lhs;
+	}
+}
+
+CorrFuncVect operator+ (const CorrFuncVect &lhs, const CorrFuncVect &rhs)
+{
+	assert(lhs.size() == rhs.size());
+	CorrFuncVect sum(lhs);
+	auto rit = rhs.cbegin();
+	for (auto it = sum.begin(); it != sum.end(); ++it)
+	{
+		*it = (*it) + (*rit);
+		++rit;
+	}
+	return sum;
+}
+
 void CorrFuncVect::CompleteCountingComparison(const double &point)
 {
-	for (auto it = begin(); it != end(); it++)
+	for (auto it = begin(); it != end(); ++it)
 	{
 		it->CountIfSmaller(point);
 	}
@@ -55,23 +108,9 @@ void CorrFuncVect::CompleteCountingComparison(const double &point)
 
 void CorrFuncVect::RescaleVectorCounter(const double &param)
 {
-	for (auto it = begin(); it != end(); it++)
+	for (auto it = begin(); it != end(); ++it)
 	{
 		it->RescaleCounter(param);
-	}
-}
-
-void CorrFuncPair::Print()
-{
-	std::cout << epsilon << '\t' << counter;
-}
-
-void CorrFuncVect::Print()
-{
-	for (auto it = begin(); it != end(); it++)
-	{
-		it->Print();
-		std::cout << '\n';
 	}
 }
 
@@ -89,6 +128,18 @@ double CorrFuncVect::PowerLawFit()
 	return b;
 }
 
+void CorrFuncVect::DeleteZeros()
+{
+	for (auto it = corrvect.begin(); it != corrvect.end();)
+	{
+		if (it->counter == 0)
+			corrvect.erase(it);
+		else
+			++it;
+	}
+}
+
+
 // ********************************************************************************************************
 // CONSTRUCTOR
 // ********************************************************************************************************
@@ -105,7 +156,7 @@ TimeSeries::TimeSeries(const std::string& line)
 std::vector<double> TimeSeries::TSminDist(const uint N) const
 {
 	std::vector< double> mindistvect;
-	for (uint t1 = N-1; t1 != this->SingleTS.size(); t1++){
+	for (uint t1 = N-1; t1 != this->SingleTS.size(); ++t1){
 		double mindist = 1e5;
 		for (uint t2 = N-1; t2 != this->SingleTS.size(); t2++){
 			double dist = this->LaggedDistance(N, t1, t2);
@@ -207,7 +258,7 @@ void TotalTimeSeries::add_series(const TimeSeries& val)
 
 void TotalTimeSeries::DivideTrainPred(const double ratio, TotalTimeSeries &train, TotalTimeSeries &pred)
 {
-	for (uint m = 0; m != N_dim; m++){
+	for (uint m = 0; m != N_dim; ++m){
 		TimeSeries helptrain, helppred;
 		ChooseSeries(m).TSDivideTrainPred(ratio, helptrain, helppred);
 		train.add_series(helptrain);
@@ -219,9 +270,9 @@ void TotalTimeSeries::StandardizeSeries()
 {
 	std::vector<double> xmin(N_dim, 1000);
 	std::vector<double> xmax(N_dim, 0);
-	for (uint i = 0; i != length_of_TS(); i++)
+	for (uint i = 0; i != length_of_TS(); ++i)
 	{
-		for (uint k = 0; k != N_dim; k++)
+		for (uint k = 0; k != N_dim; ++k)
 		{
 			if (CompleteTS[k].SingleTS[i] < xmin[k])
 			{
@@ -234,16 +285,16 @@ void TotalTimeSeries::StandardizeSeries()
 		}
 	}
 	double diff = 0;
-	for (uint i = 0; i != N_dim; i++)
+	for (uint i = 0; i != N_dim; ++i)
 	{
 		if (xmax[i]-xmin[i] > diff)
 		{
 			diff = xmax[i] - xmin[i];
 		}
 	}
-	for (uint i = 0; i != length_of_TS(); i++)
+	for (uint i = 0; i != length_of_TS(); ++i)
 	{
-		for (uint k = 0; k != N_dim; k++)
+		for (uint k = 0; k != N_dim; ++k)
 		{
 			this->CompleteTS[k].SingleTS[i] /= diff;
 			this->CompleteTS[k].SingleTS[i] -= xmin[k];
@@ -293,16 +344,18 @@ double TotalTimeSeries::PredictionCOM_scores(const double ratioTrainPred, const 
 void TotalTimeSeries::CorrelationFunction(CorrFuncVect &corrvect)
 {
 	//StandardizeSeries();
-	for (double i = 20; i >= 10; i-= 0.1)
+	for (double i = 20; i >= -1; i-= 0.2)
 	{
-		corrvect.AddEps(pow(1/2.0,static_cast<double>(i)));
-		//std::cout << singlepair[0] << '\n';
+		corrvect.AddEps(pow(1/2.0,i));
 	}
+	
+	//CorrFuncVect emptyCorrVect(corrvect);
+	
 	char const *prefix = "Looking for nearest neighbors. Progress: ";
-	//int counter = 0;
-//#pragma omp declare reduction (sum:std::vector<std::array<double,2>>:
-//#pragma omp parallel for schedule(dynamic,1) reduction(+:counter)
-	for (int i = 0; i < length_of_TS()-1; i++)
+	int couplecount = 0;
+//#pragma omp declare reduction (AddCorrVect:CorrFuncVect:omp_out = omp_out + omp_in) initializer (omp_priv = CorrFuncVect(emptyCorrVect))
+//#pragma omp parallel for shared(corrvect) //num_threads(7) reduction(AddCorrVect:corrvect)
+	for (int i = 0; i < length_of_TS()-1; ++i)
 	{
 		double p = static_cast<double>(i*100/length_of_TS());
 		std::cout << '\r' << prefix << static_cast<int>(p) << '%' << std::flush;
@@ -310,14 +363,19 @@ void TotalTimeSeries::CorrelationFunction(CorrFuncVect &corrvect)
 		{
 			double dist = DistFunc(i,j);
 			corrvect.CompleteCountingComparison(dist);
+			couplecount ++;
 		}
 	}
 	std::cout << '\r' << prefix << 100 << '%' << std::endl;
 	
-	corrvect.RescaleVectorCounter(static_cast<double>(length_of_TS()*(length_of_TS()-1))/2);
-	corrvect.Print();
+	//corrvect.DeleteZeros();
+	
+	//corrvect.RescaleVectorCounter(static_cast<double>(length_of_TS()*(length_of_TS()-1))/2);
+	corrvect.RescaleVectorCounter(static_cast<double>(couplecount));
+	
+	std::cout << corrvect;
+	
 }
-
 
 std::vector<std::vector<double> > TotalTimeSeries::CompleteMatrixDistances()
 {
@@ -462,4 +520,5 @@ double WeightFunction (const double dist, const double dist0)
 }
 
 
-int main(){}
+
+//int main(){}

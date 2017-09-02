@@ -24,13 +24,11 @@ int main(){
 	
 	std::cout << "NUMBER OF SERIES = " << numberOfSeries << '\t' << "NUMBER OF DATA FOR SERIES = " << totalLength << '\n';
 	
-	std::vector<std::array<double,2>> corrvect;
+	CorrFuncVect corrvect;
 	std::cout << "CorrelationDimension = " << totalseries.CorrelationDimension(corrvect) << '\n';
 	
 	std::ofstream myfile ("output_GRASS_"+ systemName +".dat");
-	for (uint i = 0; i != corrvect.size(); i++){
-		myfile << corrvect[i][0] << '\t' << corrvect[i][1] << '\n';
-	}
+	myfile << corrvect;
 	myfile.close();
 	
 	

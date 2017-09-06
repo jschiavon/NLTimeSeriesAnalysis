@@ -53,7 +53,7 @@ public:
 	
 private:
 	// Private member function
-	void CountIfSmaller (const double &point){ if (point <= epsilon*epsilon){counter++;} }
+	void CountIfSmaller (const double &point){ if (point <= epsilon){counter++;} }
 	void RescaleCounter (const double &param){ counter /= param;}
 	double GetRatioFromCounter(const double &param){return counter/param;}
 	
@@ -74,15 +74,15 @@ public:
 	CorrFuncVect(const CorrFuncVect &vect): corrvect(vect.corrvect){};
 	//CorrFuncVect(const 
 	
-	decltype(auto) size() const {return corrvect.size();};
-	decltype(auto) begin() {return corrvect.begin();};
-	decltype(auto) end() {return corrvect.end();};
-	decltype(auto) cbegin() const {return corrvect.cbegin();};
-	decltype(auto) cend() const {return corrvect.cend();};
+	uint size() const {return corrvect.size();};
+	std::vector<CorrFuncPair>::iterator begin() {return corrvect.begin();};
+	std::vector<CorrFuncPair>::iterator end() {return corrvect.end();};
+	std::vector<CorrFuncPair>::const_iterator cbegin() const {return corrvect.cbegin();};
+	std::vector<CorrFuncPair>::const_iterator cend() const {return corrvect.cend();};
 	
 	friend std::ostream &operator<< (std::ostream &out, const CorrFuncVect &vect);
 	friend CorrFuncVect operator+ (const CorrFuncVect &, const CorrFuncVect &);
-	decltype(auto) operator[] (const int index);
+	CorrFuncPair& operator[] (const uint index);
 	
 	// Public Member
 	void AddPair(const CorrFuncPair &);

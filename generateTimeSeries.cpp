@@ -53,7 +53,7 @@ void LorenzFunction(const state_space_LOR &X0){
 		myfile1 << '\n';
 	}
 	myfile1.close();
-	std::ofstream myfile ("LOR_Formatted.dat");
+	std::ofstream myfile ("LOR_Formatted_LLong.dat");
 	uint c = 0;
 	for (uint j = 0; j < N_variables_LOR; ++j){
 		for (uint i = 0; i <= TotalLength; ++i){
@@ -138,7 +138,7 @@ void LVFunction(const state_space_LV &X0){
 	uint c = 0;
 	for (uint j = 0; j < N_variables_LV; ++j){
 		for (uint i = 0; i <= TotalLength; ++i){
-			if (i%10 == 0)
+			if (i%20 == 0)
 			{
 				myfile << X_t[i][j] << '\t';
 				c++;

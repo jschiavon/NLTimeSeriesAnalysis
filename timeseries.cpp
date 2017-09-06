@@ -46,7 +46,7 @@ void CorrFuncVect::AddEps(const double &eps)
 	AddPair(supp);
 }
 
-decltype(auto) CorrFuncVect::operator[](const int index)
+CorrFuncPair& CorrFuncVect::operator[](const uint index)
 {
 	if (index < size() ) 
 		return corrvect[index]; 
@@ -344,7 +344,7 @@ double TotalTimeSeries::PredictionCOM_scores(const double ratioTrainPred, const 
 void TotalTimeSeries::CorrelationFunction(CorrFuncVect &corrvect)
 {
 	//StandardizeSeries();
-	for (double i = 20; i >= -1; i-= 0.2)
+	for (double i = 20; i >= -10; i-= 0.1)
 	{
 		corrvect.AddEps(pow(1/2.0,i));
 	}
@@ -352,17 +352,18 @@ void TotalTimeSeries::CorrelationFunction(CorrFuncVect &corrvect)
 	//CorrFuncVect emptyCorrVect(corrvect);
 	
 	char const *prefix = "Looking for nearest neighbors. Progress: ";
-	int couplecount = 0;
+	ulong couplecount = 0;
 //#pragma omp declare reduction (AddCorrVect:CorrFuncVect:omp_out = omp_out + omp_in) initializer (omp_priv = CorrFuncVect(emptyCorrVect))
 //#pragma omp parallel for shared(corrvect) //num_threads(7) reduction(AddCorrVect:corrvect)
-	for (int i = 0; i < length_of_TS()-1; ++i)
+	for (ulong i = 0; i < length_of_TS(); ++i)
 	{
 		double p = static_cast<double>(i*100/length_of_TS());
 		std::cout << '\r' << prefix << static_cast<int>(p) << '%' << std::flush;
-		for (int j = i; j < length_of_TS(); j++)
+		for (ulong j = 0; j < length_of_TS(); j++)
 		{
 			double dist = DistFunc(i,j);
 			corrvect.CompleteCountingComparison(dist);
+			
 			couplecount ++;
 		}
 	}
@@ -371,6 +372,7 @@ void TotalTimeSeries::CorrelationFunction(CorrFuncVect &corrvect)
 	//corrvect.DeleteZeros();
 	
 	//corrvect.RescaleVectorCounter(static_cast<double>(length_of_TS()*(length_of_TS()-1))/2);
+	//corrvect.RescaleVectorCounter(static_cast<double>(length_of_TS()*length_of_TS())/2);
 	corrvect.RescaleVectorCounter(static_cast<double>(couplecount));
 	
 	std::cout << corrvect;
@@ -408,13 +410,26 @@ std::vector< Dist_data > TotalTimeSeries::VectorDistanceFromPred(const TotalTime
 
 double TotalTimeSeries::DistFunc(const uint i, const uint j) const
 {
+// 	double d = 0;
+// 	if (i != j){
+// 		for (uint k = 0; k != N_dim; ++k){
+// 			d += (CompleteTS[k].SingleTS[i] - CompleteTS[k].SingleTS[j]) * (CompleteTS[k].SingleTS[i] - CompleteTS[k].SingleTS[j]);
+// 		}
+//		d = sqrt(d);
+// 	} else {
+// 		d = NAN;
+// 	}
 	double d = 0;
-	if (i != j){
-		for (uint k = 0; k != N_dim; ++k){
-			d += (CompleteTS[k].SingleTS[i] - CompleteTS[k].SingleTS[j]) * (CompleteTS[k].SingleTS[i] - CompleteTS[k].SingleTS[j]);
+	if (i != j)
+	{
+		for (uint k = 0; k != N_dim; ++k)
+		{
+			double d1 = std::abs(CompleteTS[k].SingleTS[i]-CompleteTS[k].SingleTS[j]);
+			if (d1 > d)
+			{
+				d = d1;
+			}
 		}
-	} else {
-		d = NAN;
 	}
 	return d;
 }

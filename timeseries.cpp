@@ -46,6 +46,16 @@ void CorrFuncVect::AddEps(const double &eps)
 	AddPair(supp);
 }
 
+std::vector<ulong> CorrFuncVect::GenerateNullCounterVector()
+{
+	std::vector<ulong> exit;
+	for (auto it = cbegin(); it != cend(); ++it)
+	{
+		exit.push_back(0);
+	}
+}
+
+
 CorrFuncPair& CorrFuncVect::operator[](const uint index)
 {
 	if (index < size() ) 
@@ -314,7 +324,7 @@ double TotalTimeSeries::PredictionCOM_scores(const double ratioTrainPred, const 
 	TotalTimeSeries train, target;
 	DivideTrainPred(ratioTrainPred, train, target);
 	TotalTimeSeries predicted(target);
-	for (uint currInd = 0; currInd != target.length_of_TS()-PRED_STEP; ++currInd){
+	for (uint64_t currInd = 0; currInd != target.length_of_TS()-PRED_STEP; ++currInd){
 		std::vector< Dist_data > distances = train.VectorDistanceFromPred(target, currInd);
 		std::partial_sort(distances.begin(), distances.begin()+(N_dim+1), distances.end(), mysortingDist_Data);
 		for (uint k = 0; k != N_dim; ++k)
@@ -328,14 +338,14 @@ double TotalTimeSeries::PredictionCOM_scores(const double ratioTrainPred, const 
 			}
 			predicted.CompleteTS[k].SingleTS[currInd] = avg_per_comp/weight_sum;
 		}
+		//std::cout << predicted.CompleteTS[0].SingleTS[currInd] << '\t' << target.CompleteTS[0].SingleTS[currInd] << '\n';
 	}
 	for (uint k = 0; k != N_dim; ++k)
 	{
 		predicted.CompleteTS[k].SingleTS.erase(predicted.CompleteTS[k].TSend()-PRED_STEP,predicted.CompleteTS[k].TSend());
 	}
 	
-	double rho = predicted.CalculateCorrelation(target);
-	return rho;
+	return predicted.CalculateCorrelation(target);
 }
 
 // ********************************************************************************************************
@@ -352,7 +362,7 @@ void TotalTimeSeries::CorrelationFunction(CorrFuncVect &corrvect)
 	//CorrFuncVect emptyCorrVect(corrvect);
 	
 	char const *prefix = "Looking for nearest neighbors. Progress: ";
-	ulong couplecount = 0;
+	unsigned long long couplecount = 0;
 //#pragma omp declare reduction (AddCorrVect:CorrFuncVect:omp_out = omp_out + omp_in) initializer (omp_priv = CorrFuncVect(emptyCorrVect))
 //#pragma omp parallel for shared(corrvect) //num_threads(7) reduction(AddCorrVect:corrvect)
 	for (ulong i = 0; i < length_of_TS(); ++i)
@@ -375,7 +385,7 @@ void TotalTimeSeries::CorrelationFunction(CorrFuncVect &corrvect)
 	//corrvect.RescaleVectorCounter(static_cast<double>(length_of_TS()*length_of_TS())/2);
 	corrvect.RescaleVectorCounter(static_cast<double>(couplecount));
 	
-	std::cout << corrvect;
+	//std::cout << corrvect;
 	
 }
 
@@ -400,7 +410,7 @@ std::vector< Dist_data > TotalTimeSeries::VectorDistanceFromPred(const TotalTime
 	std::vector< Dist_data > dist;
 	dist.reserve(length_of_TS());
 	Dist_data helper;
-	for (uint i = 0; i != length_of_TS(); ++i){
+	for (uint64_t i = 0; i != length_of_TS(); ++i){
 		helper.dist = DistFunc(pred, i, currentInd);
 		helper.label = i;
 		dist.push_back(helper);
@@ -460,7 +470,9 @@ double TotalTimeSeries::CalculateCorrelation(const TotalTimeSeries &target)
 	{
 		rho += DistFunc(target,i,i);
 	}
-	return sqrt(rho)/(length_of_TS()*target.CalculateSTD());
+	double corr = sqrt(rho)/(length_of_TS()*target.CalculateSTD());
+	//std::cout << "---- Correlation: " << corr << '\t' << target.CalculateSTD() << '\n';
+	return corr;
 }
 
 double TotalTimeSeries::CalculateSTD() const 

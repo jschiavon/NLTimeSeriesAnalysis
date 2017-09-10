@@ -18,16 +18,30 @@ int main(){
 	
 	std::cin >> systemName;
 	
-	TotalTimeSeries totalseries(systemName + "_Formatted.dat");
+	TotalTimeSeries totalseries(systemName + "_Formatted_Short.dat");
 	
 	std::cout << "NUMBER OF SERIES = " << totalseries.number_of_TS() << '\t' << "NUMBER OF DATA FOR SERIES = " << totalseries.length_of_TS() << '\n';
-	
+	/*
 	CorrFuncVect corrvect;
 	std::cout << "CorrelationDimension = " << totalseries.CorrelationDimension(corrvect) << '\n';
 	
-	std::ofstream myfile ("output_GRASS_"+ systemName +".dat");
-	myfile << corrvect;
-	myfile.close();
+	std::ofstream out1 ("output_GRASS_"+ systemName +".dat");
+	out1 << corrvect;
+	out1.close();
+	*/
+	std::array<double,10> predquality;
+//#pragma omp parallel for shared(predquality) num_threads(6) //reduction(AddCorrVect:corrvect)
+	for (uint timestep = 1; timestep < 11; timestep++)
+	{
+		predquality[timestep-1] = totalseries.PredictionCOM_scores(0.8, timestep);
+	}
+	
+	std::ofstream out2 ("output_PRED_"+ systemName +"_Short.dat");
+	for (uint i = 1; i < 11; i++)
+	{
+		out2 << i << '\t' << predquality[i-1] << '\n';
+	}
+	out2.close();
 	
 	return 0;
 }

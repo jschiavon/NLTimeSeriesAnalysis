@@ -93,6 +93,8 @@ public:
 	double PowerLawFit ();
 	void DeleteZeros ();
 	
+	std::vector<ulong> GenerateNullCounterVector();
+	
 private:
 	// Data member
 	std::vector<CorrFuncPair> corrvect;
@@ -148,7 +150,7 @@ public:
 	void add_series (const TimeSeries &);
 	TimeSeries ChooseSeries(const uint i){return CompleteTS[i];};
 	void DivideTrainPred(const double, TotalTimeSeries&, TotalTimeSeries&);
-	
+
 	void StandardizeSeries();
 	
 	double CorrelationDimension(CorrFuncVect&);

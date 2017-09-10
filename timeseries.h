@@ -39,6 +39,67 @@ struct Dist_data
 	int label;
 };
 
+struct CorrFuncVect;
+
+struct CorrFuncPair
+{
+	friend struct CorrFuncVect;
+public:
+	// Constructor
+	CorrFuncPair() = default;
+	CorrFuncPair(const double &eps): epsilon(eps) {};
+	CorrFuncPair(const double &eps, const int &count): epsilon(eps), counter(static_cast<double>(count)) {};
+	CorrFuncPair(const double &eps, const double &count): epsilon(eps), counter(count) {};
+	
+private:
+	// Private member function
+	void CountIfSmaller (const double &point){ if (point <= epsilon){counter++;} }
+	void RescaleCounter (const double &param){ counter /= param;}
+	double GetRatioFromCounter(const double &param){return counter/param;}
+	
+	friend std::ostream &operator<< (std::ostream &out, const CorrFuncPair &pair);
+	friend CorrFuncPair operator+ (const CorrFuncPair &, const CorrFuncPair &);
+	
+	// Data member
+	double epsilon = 0;
+	double counter = 0;
+};
+
+struct CorrFuncVect
+{
+public:
+	// Constructor
+	CorrFuncVect() = default;
+	CorrFuncVect(const CorrFuncPair &pair): corrvect(1,pair){};
+	CorrFuncVect(const CorrFuncVect &vect): corrvect(vect.corrvect){};
+	//CorrFuncVect(const 
+	
+	uint size() const {return corrvect.size();};
+	std::vector<CorrFuncPair>::iterator begin() {return corrvect.begin();};
+	std::vector<CorrFuncPair>::iterator end() {return corrvect.end();};
+	std::vector<CorrFuncPair>::const_iterator cbegin() const {return corrvect.cbegin();};
+	std::vector<CorrFuncPair>::const_iterator cend() const {return corrvect.cend();};
+	
+	friend std::ostream &operator<< (std::ostream &out, const CorrFuncVect &vect);
+	friend CorrFuncVect operator+ (const CorrFuncVect &, const CorrFuncVect &);
+	CorrFuncPair& operator[] (const uint index);
+	
+	// Public Member
+	void AddPair(const CorrFuncPair &);
+	void AddEps(const double &);
+	
+	void CompleteCountingComparison (const double &);
+	void RescaleVectorCounter(const double &);
+	double PowerLawFit ();
+	void DeleteZeros ();
+	
+	std::vector<ulong> GenerateNullCounterVector();
+	
+private:
+	// Data member
+	std::vector<CorrFuncPair> corrvect;
+};
+
 class TimeSeries
 {
 	friend class TotalTimeSeries;
@@ -89,8 +150,10 @@ public:
 	void add_series (const TimeSeries &);
 	TimeSeries ChooseSeries(const uint i){return CompleteTS[i];};
 	void DivideTrainPred(const double, TotalTimeSeries&, TotalTimeSeries&);
+
+	void StandardizeSeries();
 	
-	double CorrelationDimension(std::vector<std::array<double,2>>&);
+	double CorrelationDimension(CorrFuncVect&);
 	double PredictionCOM_scores(const double, const uint);
 	
 private:
@@ -101,7 +164,7 @@ private:
 	double DistFunc(const TotalTimeSeries&, const uint, const uint) const;
 	double DistFunc(const uint) const;
 	
-	void CorrelationFunction(std::vector<std::array<double,2>>&);
+	void CorrelationFunction(CorrFuncVect&);
 	double CalculateCorrelation(const TotalTimeSeries &);
 	double CalculateSTD() const;
 	
@@ -112,7 +175,6 @@ private:
 
 void SortDistanceMatrix(std::vector<std::vector<double>>&);
 void MinMaxDist(std::vector<std::vector<double>>&, double&, double&);
-double PowerLawFit(const std::vector<std::array<double,2>>);
 double WeightFunction (const double, const double);
 bool mysorting (double i, double j);
 bool mysortingDist_Data (Dist_data i, Dist_data j);

@@ -26,11 +26,129 @@
 #include <string>
 #include <algorithm>
 #include <math.h>
+#include <assert.h>
+//#include <boost/thread.hpp>
+
 #include "timeseries.h"
 
 									// *******************************************************************************************************
 									// 							SUPPORT CLASS
 									// *******************************************************************************************************
+
+void CorrFuncVect::AddPair(const CorrFuncPair &pair)
+{
+	corrvect.push_back(pair);
+}
+
+void CorrFuncVect::AddEps(const double &eps)
+{
+	CorrFuncPair supp(eps);
+	AddPair(supp);
+}
+
+std::vector<ulong> CorrFuncVect::GenerateNullCounterVector()
+{
+	std::vector<ulong> exit;
+	for (auto it = cbegin(); it != cend(); ++it)
+	{
+		exit.push_back(0);
+	}
+}
+
+
+CorrFuncPair& CorrFuncVect::operator[](const uint index)
+{
+	if (index < size() ) 
+		return corrvect[index]; 
+	else 
+	{
+		std::cout << "error access\n"; 
+		return corrvect[size()-1];
+	}
+}
+
+std::ostream& operator<< (std::ostream &out, const CorrFuncPair &pair)
+{
+	out << pair.epsilon << '\t' << pair.counter;
+	return out;
+}
+
+std::ostream& operator<< (std::ostream &out, const CorrFuncVect &vect)
+{
+	for (auto it = vect.cbegin(); it != vect.cend(); it++)
+	{
+		out << *it << '\n';
+	}
+	return out;
+}
+
+CorrFuncPair operator+ (const CorrFuncPair &lhs, const CorrFuncPair &rhs)
+{
+	if (lhs.epsilon == rhs.epsilon)
+	{
+		CorrFuncPair sum(lhs.epsilon, lhs.counter + rhs.counter);
+		return sum;
+	} else
+	{ 
+		std::cerr << "ERROR: summing with different epsilon!\n";
+		return lhs;
+	}
+}
+
+CorrFuncVect operator+ (const CorrFuncVect &lhs, const CorrFuncVect &rhs)
+{
+	assert(lhs.size() == rhs.size());
+	CorrFuncVect sum(lhs);
+	auto rit = rhs.cbegin();
+	for (auto it = sum.begin(); it != sum.end(); ++it)
+	{
+		*it = (*it) + (*rit);
+		++rit;
+	}
+	return sum;
+}
+
+void CorrFuncVect::CompleteCountingComparison(const double &point)
+{
+	for (auto it = begin(); it != end(); ++it)
+	{
+		it->CountIfSmaller(point);
+	}
+}
+
+void CorrFuncVect::RescaleVectorCounter(const double &param)
+{
+	for (auto it = begin(); it != end(); ++it)
+	{
+		it->RescaleCounter(param);
+	}
+}
+
+double CorrFuncVect::PowerLawFit()
+{
+	double sumEps = 0, sumCount =0, sumEpsCount = 0, sumEps2 = 0;
+	for (auto it = begin(); it != end(); ++it){
+		sumEps += log(it->epsilon);
+		sumCount += log(it->counter);
+		sumEpsCount += log(it->epsilon)*log(it->counter);
+		sumEps2 += log(it->epsilon)*log(it->epsilon);
+	}
+	double b = (size()*sumEpsCount - sumEps*sumCount)/(size()*sumEps2 - sumEps*sumEps);
+	double a = (sumCount - b*sumEps)/size();
+	return b;
+}
+
+void CorrFuncVect::DeleteZeros()
+{
+	for (auto it = corrvect.begin(); it != corrvect.end();)
+	{
+		if (it->counter == 0)
+			corrvect.erase(it);
+		else
+			++it;
+	}
+}
+
 
 // ********************************************************************************************************
 // CONSTRUCTOR
@@ -48,7 +166,7 @@ TimeSeries::TimeSeries(const std::string& line)
 std::vector<double> TimeSeries::TSminDist(const uint N) const
 {
 	std::vector< double> mindistvect;
-	for (uint t1 = N-1; t1 != this->SingleTS.size(); t1++){
+	for (uint t1 = N-1; t1 != this->SingleTS.size(); ++t1){
 		double mindist = 1e5;
 		for (uint t2 = N-1; t2 != this->SingleTS.size(); t2++){
 			double dist = this->LaggedDistance(N, t1, t2);
@@ -124,7 +242,10 @@ TotalTimeSeries::TotalTimeSeries(const std::string &filename)
 		TimeSeries singleinput(line);
 		//std::cout << i << '\t' << singleinput.length() << '\n';
 		if (CompleteTS.size() != 0){
-			if (singleinput.length() != this->length_of_TS()){std::cerr << "Time series has different dimensions. This abilities has not been developed yet, please provide series of equal dimensions" << '\n';break;}
+			if (singleinput.length() != this->length_of_TS()){
+				std::cerr << "Time series has different dimensions. This abilities has not been developed yet, please provide series of equal dimensions" << '\n';
+				break;
+			}
 		}
 		CompleteTS.push_back(singleinput);
 		i++;
@@ -147,7 +268,7 @@ void TotalTimeSeries::add_series(const TimeSeries& val)
 
 void TotalTimeSeries::DivideTrainPred(const double ratio, TotalTimeSeries &train, TotalTimeSeries &pred)
 {
-	for (uint m = 0; m != N_dim; m++){
+	for (uint m = 0; m != N_dim; ++m){
 		TimeSeries helptrain, helppred;
 		ChooseSeries(m).TSDivideTrainPred(ratio, helptrain, helppred);
 		train.add_series(helptrain);
@@ -155,47 +276,47 @@ void TotalTimeSeries::DivideTrainPred(const double ratio, TotalTimeSeries &train
 	}
 }
 
-// Predictors
-void TotalTimeSeries::CorrelationFunction(std::vector<std::array<double,2>> &corrvect)
+void TotalTimeSeries::StandardizeSeries()
 {
-	std::cout << "calculate matrix\n";
-	std::vector<std::vector<double>> distmatrix = CompleteMatrixDistances();
-	SortDistanceMatrix(distmatrix);
-	
-	std::cout << "completed!\ncalculate min dist\n";
-	
-	double mindist, maxdist, rangeEpsilon;
-	MinMaxDist(distmatrix,mindist,maxdist);
-	rangeEpsilon = maxdist-mindist;
-	
-	std::cout << mindist << '\t' << rangeEpsilon << '\t' << maxdist <<'\n';
-	std::array<double,2> singlepair;
-	std::vector<uint> count(length_of_TS(),0);
-	
-	for (double exp = log10(mindist); exp <= -3; exp += 0.05){
-		singlepair[0] = pow(10,exp);
-		double totcount = 0;
-		for (uint i = 0; i != length_of_TS(); ++i){
-			uint k = count[i];
-			while (distmatrix[i][k] <= singlepair[0]*singlepair[0]){
-				count[i]++;
-				k++;
-			}
-			totcount += count[i];
-		}
-		singlepair[1] = totcount/((double)length_of_TS()*(double)length_of_TS());
-		std::cout << singlepair[0] << '\t' << totcount << '\n';
-		if (totcount > 0)
+	std::vector<double> xmin(N_dim, 1000);
+	std::vector<double> xmax(N_dim, 0);
+	for (uint i = 0; i != length_of_TS(); ++i)
+	{
+		for (uint k = 0; k != N_dim; ++k)
 		{
-			corrvect.push_back(singlepair);
+			if (CompleteTS[k].SingleTS[i] < xmin[k])
+			{
+				xmin[k] = CompleteTS[k].SingleTS[i];
+			}
+			if (CompleteTS[k].SingleTS[i] > xmax[k])
+			{
+				xmax[k] = CompleteTS[k].SingleTS[i];
+			}
+		}
+	}
+	double diff = 0;
+	for (uint i = 0; i != N_dim; ++i)
+	{
+		if (xmax[i]-xmin[i] > diff)
+		{
+			diff = xmax[i] - xmin[i];
+		}
+	}
+	for (uint i = 0; i != length_of_TS(); ++i)
+	{
+		for (uint k = 0; k != N_dim; ++k)
+		{
+			this->CompleteTS[k].SingleTS[i] /= diff;
+			this->CompleteTS[k].SingleTS[i] -= xmin[k];
 		}
 	}
 }
 
-double TotalTimeSeries::CorrelationDimension(std::vector<std::array<double,2>> &corrvect)
+// Predictors
+double TotalTimeSeries::CorrelationDimension(CorrFuncVect &corrvect)
 {
 	CorrelationFunction(corrvect);
-	return PowerLawFit(corrvect);
+	return corrvect.PowerLawFit();
 }
 
 double TotalTimeSeries::PredictionCOM_scores(const double ratioTrainPred, const uint PRED_STEP)
@@ -203,7 +324,7 @@ double TotalTimeSeries::PredictionCOM_scores(const double ratioTrainPred, const 
 	TotalTimeSeries train, target;
 	DivideTrainPred(ratioTrainPred, train, target);
 	TotalTimeSeries predicted(target);
-	for (uint currInd = 0; currInd != target.length_of_TS()-PRED_STEP; ++currInd){
+	for (uint64_t currInd = 0; currInd != target.length_of_TS()-PRED_STEP; ++currInd){
 		std::vector< Dist_data > distances = train.VectorDistanceFromPred(target, currInd);
 		std::partial_sort(distances.begin(), distances.begin()+(N_dim+1), distances.end(), mysortingDist_Data);
 		for (uint k = 0; k != N_dim; ++k)
@@ -217,19 +338,57 @@ double TotalTimeSeries::PredictionCOM_scores(const double ratioTrainPred, const 
 			}
 			predicted.CompleteTS[k].SingleTS[currInd] = avg_per_comp/weight_sum;
 		}
+		//std::cout << predicted.CompleteTS[0].SingleTS[currInd] << '\t' << target.CompleteTS[0].SingleTS[currInd] << '\n';
 	}
 	for (uint k = 0; k != N_dim; ++k)
 	{
 		predicted.CompleteTS[k].SingleTS.erase(predicted.CompleteTS[k].TSend()-PRED_STEP,predicted.CompleteTS[k].TSend());
 	}
 	
-	double rho = predicted.CalculateCorrelation(target);
-	return rho;
+	return predicted.CalculateCorrelation(target);
 }
 
 // ********************************************************************************************************
 // MEMBER PRIVATE FUNCTIONS
 // ********************************************************************************************************
+void TotalTimeSeries::CorrelationFunction(CorrFuncVect &corrvect)
+{
+	//StandardizeSeries();
+	for (double i = 20; i >= -10; i-= 0.1)
+	{
+		corrvect.AddEps(pow(1/2.0,i));
+	}
+	
+	//CorrFuncVect emptyCorrVect(corrvect);
+	
+	char const *prefix = "Looking for nearest neighbors. Progress: ";
+	unsigned long long couplecount = 0;
+//#pragma omp declare reduction (AddCorrVect:CorrFuncVect:omp_out = omp_out + omp_in) initializer (omp_priv = CorrFuncVect(emptyCorrVect))
+//#pragma omp parallel for shared(corrvect) //num_threads(7) reduction(AddCorrVect:corrvect)
+	for (ulong i = 0; i < length_of_TS(); ++i)
+	{
+		double p = static_cast<double>(i*100/length_of_TS());
+		std::cout << '\r' << prefix << static_cast<int>(p) << '%' << std::flush;
+		for (ulong j = 0; j < length_of_TS(); j++)
+		{
+			double dist = DistFunc(i,j);
+			corrvect.CompleteCountingComparison(dist);
+			
+			couplecount ++;
+		}
+	}
+	std::cout << '\r' << prefix << 100 << '%' << std::endl;
+	
+	//corrvect.DeleteZeros();
+	
+	//corrvect.RescaleVectorCounter(static_cast<double>(length_of_TS()*(length_of_TS()-1))/2);
+	//corrvect.RescaleVectorCounter(static_cast<double>(length_of_TS()*length_of_TS())/2);
+	corrvect.RescaleVectorCounter(static_cast<double>(couplecount));
+	
+	//std::cout << corrvect;
+	
+}
+
 std::vector<std::vector<double> > TotalTimeSeries::CompleteMatrixDistances()
 {
 	std::vector<std::vector<double>> matrix;
@@ -251,7 +410,7 @@ std::vector< Dist_data > TotalTimeSeries::VectorDistanceFromPred(const TotalTime
 	std::vector< Dist_data > dist;
 	dist.reserve(length_of_TS());
 	Dist_data helper;
-	for (uint i = 0; i != length_of_TS(); ++i){
+	for (uint64_t i = 0; i != length_of_TS(); ++i){
 		helper.dist = DistFunc(pred, i, currentInd);
 		helper.label = i;
 		dist.push_back(helper);
@@ -261,13 +420,26 @@ std::vector< Dist_data > TotalTimeSeries::VectorDistanceFromPred(const TotalTime
 
 double TotalTimeSeries::DistFunc(const uint i, const uint j) const
 {
+// 	double d = 0;
+// 	if (i != j){
+// 		for (uint k = 0; k != N_dim; ++k){
+// 			d += (CompleteTS[k].SingleTS[i] - CompleteTS[k].SingleTS[j]) * (CompleteTS[k].SingleTS[i] - CompleteTS[k].SingleTS[j]);
+// 		}
+//		d = sqrt(d);
+// 	} else {
+// 		d = NAN;
+// 	}
 	double d = 0;
-	if (i != j){
-		for (uint k = 0; k != N_dim; ++k){
-			d += (CompleteTS[k].SingleTS[i] - CompleteTS[k].SingleTS[j]) * (CompleteTS[k].SingleTS[i] - CompleteTS[k].SingleTS[j]);
+	if (i != j)
+	{
+		for (uint k = 0; k != N_dim; ++k)
+		{
+			double d1 = std::abs(CompleteTS[k].SingleTS[i]-CompleteTS[k].SingleTS[j]);
+			if (d1 > d)
+			{
+				d = d1;
+			}
 		}
-	} else {
-		d = NAN;
 	}
 	return d;
 }
@@ -298,7 +470,9 @@ double TotalTimeSeries::CalculateCorrelation(const TotalTimeSeries &target)
 	{
 		rho += DistFunc(target,i,i);
 	}
-	return sqrt(rho)/(length_of_TS()*target.CalculateSTD());
+	double corr = sqrt(rho)/(length_of_TS()*target.CalculateSTD());
+	//std::cout << "---- Correlation: " << corr << '\t' << target.CalculateSTD() << '\n';
+	return corr;
 }
 
 double TotalTimeSeries::CalculateSTD() const 
@@ -367,24 +541,11 @@ void MinMaxDist(std::vector<std::vector<double>> &mat, double &min, double &max)
 	}
 }
 
-double PowerLawFit(const std::vector<std::array<double,2>> X)
-{
-	double sumX = 0, sumY =0, sumXY = 0, sumX2 = 0;
-	for (uint i = 0; i != X.size(); ++i){
-		sumX += log(X[i][0]);
-		sumY += log(X[i][1]);
-		sumXY += log(X[i][0])*log(X[i][1]);
-		sumX2 += log(X[i][0])*log(X[i][0]);
-	}
-	double b = (X.size()*sumXY - sumX*sumY)/(X.size()*sumX2 - sumX*sumX);
-	double a = (sumY - b*sumX)/X.size();
-	return b;
-}
-
 double WeightFunction (const double dist, const double dist0)
 {
 	return std::max(exp(dist/dist0), MIN_WEIGHT);
 }
+
 
 
 //int main(){}

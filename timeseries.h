@@ -82,6 +82,8 @@ public:
 	
 	friend std::ostream &operator<< (std::ostream &out, const CorrFuncVect &vect);
 	friend CorrFuncVect operator+ (const CorrFuncVect &, const CorrFuncVect &);
+    CorrFuncVect& operator+= ( const CorrFuncVect &);
+
 	CorrFuncPair& operator[] (const uint index);
 	
 	// Public Member
@@ -123,7 +125,7 @@ public:
 private:
 	// Private member function
 	double LaggedDistance(const uint, const uint, const uint) const;
-	
+
 	// Data type
 	std::vector< double > SingleTS;
 	
@@ -148,13 +150,19 @@ public:
 	uint length_of_TS() const {return CompleteTS[0].length();};
 	
 	void add_series (const TimeSeries &);
+	void set_dimension(const uint dim){N_dim=dim; CompleteTS.reserve(dim); for (uint i = 0; i != dim; ++i) CompleteTS.push_back(TimeSeries());};
+	void add_timestep (const std::vector<double>&);
 	TimeSeries ChooseSeries(const uint i){return CompleteTS[i];};
 	void DivideTrainPred(const double, TotalTimeSeries&, TotalTimeSeries&);
+	
+	void reserve(const ulong length){for (uint i = 0; i != N_dim; ++i){CompleteTS[i].SingleTS.reserve(length);}};
 
 	void StandardizeSeries();
 	
 	double CorrelationDimension(CorrFuncVect&);
 	double PredictionCOM_scores(const double, const uint);
+	
+	std::vector<double> operator[] (const ulong index);
 	
 private:
 	// Private member
@@ -167,7 +175,8 @@ private:
 	void CorrelationFunction(CorrFuncVect&);
 	double CalculateCorrelation(const TotalTimeSeries &);
 	double CalculateSTD() const;
-	
+    friend void neighborsProcessing(int IdThread, ulong start, ulong stop,  TotalTimeSeries& Series, CorrFuncVect &Corvvect, unsigned long long&  couplecount ); 
+
 	// Data type
 	uint N_dim = 0;
 	std::vector< TimeSeries > CompleteTS;
@@ -178,5 +187,7 @@ void MinMaxDist(std::vector<std::vector<double>>&, double&, double&);
 double WeightFunction (const double, const double);
 bool mysorting (double i, double j);
 bool mysortingDist_Data (Dist_data i, Dist_data j);
+void neighborsProcessing(int IdThread, ulong start, ulong stop,  TotalTimeSeries& Series, CorrFuncVect &Corvvect, unsigned long long&  couplecount ); 
 
-#endif // TIMESERIES_H
+
+#endif // TIMESERIES_

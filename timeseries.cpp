@@ -30,6 +30,8 @@
 //#include <boost/thread.hpp>
 
 #include "timeseries.h"
+#include <thread>
+#include <mutex>
 
 									// *******************************************************************************************************
 									// 							SUPPORT CLASS
@@ -108,6 +110,12 @@ CorrFuncVect operator+ (const CorrFuncVect &lhs, const CorrFuncVect &rhs)
 	return sum;
 }
 
+CorrFuncVect& CorrFuncVect::operator+= (const CorrFuncVect &rhs)
+{
+    *this= *this + rhs;
+	return *this;
+}
+
 void CorrFuncVect::CompleteCountingComparison(const double &point)
 {
 	for (auto it = begin(); it != end(); ++it)
@@ -134,7 +142,7 @@ double CorrFuncVect::PowerLawFit()
 		sumEps2 += log(it->epsilon)*log(it->epsilon);
 	}
 	double b = (size()*sumEpsCount - sumEps*sumCount)/(size()*sumEps2 - sumEps*sumEps);
-	double a = (sumCount - b*sumEps)/size();
+	//double a = (sumCount - b*sumEps)/size();
 	return b;
 }
 
@@ -266,6 +274,37 @@ void TotalTimeSeries::add_series(const TimeSeries& val)
 	CompleteTS.push_back(val);
 }
 
+void TotalTimeSeries::add_timestep(const std::vector<double> &input)
+{
+	if (input.size()==N_dim) 
+	{
+		for (uint i = 0; i != N_dim; ++i)
+		{
+			CompleteTS[i].SingleTS.push_back(input[i]);
+		}
+	} else if (N_dim == 0){
+		N_dim = input.size();
+		for (uint i = 0; i != N_dim; ++i)
+		{
+			CompleteTS.push_back(TimeSeries(std::vector<double>{input[i]}));
+		}
+	} else {
+		std::cout << "error! the input time step has different number of ts." << std::endl;
+		int a;
+		std::cin >> a;
+	}
+}
+
+std::vector<double> TotalTimeSeries::operator[](const ulong index)
+{
+	std::vector<double> output(N_dim, 0);
+	for (uint i = 0; i != N_dim; ++i)
+	{
+		output[i] = CompleteTS[i].SingleTS[index];
+	}
+	return output;
+}
+
 void TotalTimeSeries::DivideTrainPred(const double ratio, TotalTimeSeries &train, TotalTimeSeries &pred)
 {
 	for (uint m = 0; m != N_dim; ++m){
@@ -359,34 +398,56 @@ void TotalTimeSeries::CorrelationFunction(CorrFuncVect &corrvect)
 		corrvect.AddEps(pow(1/2.0,i));
 	}
 	
-	//CorrFuncVect emptyCorrVect(corrvect);
-	
-	char const *prefix = "Looking for nearest neighbors. Progress: ";
-	unsigned long long couplecount = 0;
-//#pragma omp declare reduction (AddCorrVect:CorrFuncVect:omp_out = omp_out + omp_in) initializer (omp_priv = CorrFuncVect(emptyCorrVect))
-//#pragma omp parallel for shared(corrvect) //num_threads(7) reduction(AddCorrVect:corrvect)
-	for (ulong i = 0; i < length_of_TS(); ++i)
-	{
-		double p = static_cast<double>(i*100/length_of_TS());
-		std::cout << '\r' << prefix << static_cast<int>(p) << '%' << std::flush;
-		for (ulong j = 0; j < length_of_TS(); j++)
-		{
-			double dist = DistFunc(i,j);
-			corrvect.CompleteCountingComparison(dist);
-			
-			couplecount ++;
-		}
+    unsigned long long couplecount = 0;
+    
+    std::vector<std::thread> threads;
+    uint N_thread = 7;
+	ulong chunk_lenght = 1.*length_of_TS()/(N_thread);
+	ulong start = 0, stop = chunk_lenght;
+    for (uint i = 0; i != N_thread; ++i)
+    {
+		if (i==N_thread-1)
+			stop = length_of_TS();
+		char const *prefix = "Looking for nearest neighbors -> Thread: ";
+		std::cout << prefix << i << '\n' <<
+		"start: " << start << " | stop: " << stop <<
+		std::endl;
+		threads.push_back(std::thread( neighborsProcessing, i, start, stop, std::ref(*this), std::ref(corrvect), std::ref(couplecount) ));
+		start = stop;
+		stop += chunk_lenght;
+    }
+    
+    for (uint i = 0; i != N_thread; ++i)
+    {
+		threads[i].join();
 	}
-	std::cout << '\r' << prefix << 100 << '%' << std::endl;
-	
-	//corrvect.DeleteZeros();
-	
-	//corrvect.RescaleVectorCounter(static_cast<double>(length_of_TS()*(length_of_TS()-1))/2);
-	//corrvect.RescaleVectorCounter(static_cast<double>(length_of_TS()*length_of_TS())/2);
 	corrvect.RescaleVectorCounter(static_cast<double>(couplecount));
 	
-	//std::cout << corrvect;
-	
+}
+
+// ndrg edit
+void neighborsProcessing(int IdThread, ulong start, ulong stop,  TotalTimeSeries& Series, CorrFuncVect &Corvvect, unsigned long long&  couplecount )
+{
+	unsigned long long local_couplecount = 0;
+    CorrFuncVect local_corvvect(Corvvect);
+    
+	for (ulong i = start; (i < stop && i < (Series.length_of_TS()-1)); ++i)
+	{		
+		for (ulong j = 0; j < Series.length_of_TS(); j++)
+		{
+			double dist = Series.DistFunc(i,j);
+			local_corvvect.CompleteCountingComparison(dist);
+			
+			local_couplecount ++;
+		}
+	}
+	std::cout << "Thread: " <<  static_cast<char>(IdThread) << " local_couplecount: " << local_couplecount <<" | Finished!.\n" << std::endl;
+    std::mutex m ;
+    m.lock();
+    couplecount+=local_couplecount;
+    Corvvect.operator+=(local_corvvect);
+    m.unlock();
+    
 }
 
 std::vector<std::vector<double> > TotalTimeSeries::CompleteMatrixDistances()
@@ -425,7 +486,7 @@ double TotalTimeSeries::DistFunc(const uint i, const uint j) const
 // 		for (uint k = 0; k != N_dim; ++k){
 // 			d += (CompleteTS[k].SingleTS[i] - CompleteTS[k].SingleTS[j]) * (CompleteTS[k].SingleTS[i] - CompleteTS[k].SingleTS[j]);
 // 		}
-//		d = sqrt(d);
+// 		d = sqrt(d);
 // 	} else {
 // 		d = NAN;
 // 	}
@@ -440,6 +501,8 @@ double TotalTimeSeries::DistFunc(const uint i, const uint j) const
 				d = d1;
 			}
 		}
+	}else {
+		d = NAN;
 	}
 	return d;
 }
